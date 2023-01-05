@@ -1,0 +1,17 @@
+.GameOverModal {
+	padding: 20px 0;
+	&__player {
+		width: 100%;
+		display: flex;
+		justify-content: center;
+		font-size: 25px;
+		padding: 10px 0;
+	}
+	&__win {
+		font-size: 27px;
+		width: 100%;
+		display: flex;
+		justify-content: center;
+		padding-top: 20px;
+	}
+}

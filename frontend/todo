@@ -1,0 +1,26 @@
+bug from joinroomid (where we have a 'undefined room') + we cant update
+-------------------------------------
+private message:
+	in chat contex
+message:
+	special messages:
+		reducer:
+			'ADD_MM_MESSAGE'
+			'UPDATE_MM_MESSAGE'
+			'ADD_SYSTEM_MESSAGE'
+		event:
+			'MATCHMAKING_MESSAGE' => 'ADD_MM_MESSAGE'
+			'OVER_MATCHMAKING_MESSAGE' => 'UPDATE_MM_MESSAGE'
+			'SYSYEM MESSAGE' => 'ADD_SYSTEM_MESSAGE'
+system_message:
+{
+	user: User
+	message: string
+}
+matchmaking_message:
+{
+	user: User
+	still_waiting: boolean
+}
+-------------------------------------
+gane add spectate and private joining

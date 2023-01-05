@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+    database:
+        container_name: postgres
+        image: postgres:14.4-alpine
+        restart: unless-stopped
+        volumes:
+            - database:/var/lib/postgresql/data
+        environment:
+            POSTGRES_USER: ${DATABASE_USERNAME}
+            POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+            POSTGRES_DATABASE: ${DATABASE_DBNAME}
+        networks:
+            - nesjs-network
+        healthcheck:
+            test: ['CMD-SHELL', 'pg_isready -U ${DATABASE_USERNAME}']
+            interval: 5s
+            timeout: 5s
+            retries: 5
+    back:
+        container_name: back
+        build: ./backend
+        depends_on:
+            database:
+                condition: service_healthy
+        environment:
+            ENV: ${ENV}
+            DATABASE_URL: "postgresql://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@database:5432/${DATABASE_DBNAME}?schema=public"
+            INTRA_OAUTH2_ID: ${OAUTH_CLIENTID}
+            INTRA_OAUTH2_SECRET: ${OAUTH_SECRET}
+            INTRA_OAUTH2_CALLBACKURL: ${URL}
+            JWT_ACCESS_TOKEN_SECRET: ${SECRET_TOKEN}
+            JWT_ACCESS_TOKEN_EXPIRATION_TIME: 10000
+        ports:
+            - 3000:3000
+        volumes:
+            - assets:/usr/src/app/dist/uploads/
+        networks:
+            - nesjs-network
+        restart: unless-stopped
+    front:
+        container_name: front
+        build: ./frontend
+        ports:
+            - 4000:4000
+        environment:
+            REACT_APP_ENV: ${ENV}
+            REACT_APP_URL: ${URL}
+            REACT_APP_BACKEND_URL: ${BACKEND_URL}
+            REACT_APP_OAUTH_CLIENTID: ${OAUTH_CLIENTID}
+        restart: unless-stopped
+        networks:
+            - nesjs-network
+networks:
+    nesjs-network:
+volumes:
+    database:
+    assets:
+

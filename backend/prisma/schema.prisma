@@ -1,0 +1,199 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Status {
+  ONLINE
+  AWAY
+  PLAYING
+  OFFLINE
+}
+
+enum FriendShipStatus {
+  WAITING
+  DENIED
+  ACCEPTED
+  BLOCKED
+}
+
+enum ChannelType {
+  PRIVATE
+  PROTECTED
+  PUBLIC
+}
+
+enum ChannelUserStatus {
+  BAN
+  KICK
+  MUTE
+  INVITE
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum ChannelMessageType {
+  MESSAGE
+  INVITE
+  SYSTEM
+  GAME
+}
+
+enum GameStatus {
+  PENDING
+  DRAW
+  WIN
+  LOSE
+}
+
+model User {
+  id               Int                @id @default(autoincrement())
+  name             String             @unique
+  status           Status             @default(OFFLINE)
+  avatar           String             @default("uploads/user/default.jpg")
+  otp_secret       String?
+  otp_enable       Boolean            @default(false)
+  intra_id         String             @unique
+  friendRequest    FriendShip[]       @relation("friends_requests")
+  friendProposal   FriendShip[]       @relation("friends_proposals")
+  channelsOwner    Channel[]          @relation("channels_owner")
+  channels         ChannelUser[]      @relation("channel_user_user")
+  ChannelMessage   ChannelMessage[]
+  DMChannelUser    DMChannelUser[]
+  DMChannelMessage DMChannelMessage[]
+  gamesLeftPlayer  Game[]             @relation("left_player")
+  gamesRightPlayer Game[]             @relation("right_player")
+}
+
+model FriendShip {
+  requesterId Int
+  receiverId  Int
+  status      FriendShipStatus @default(WAITING)
+
+  requester User @relation("friends_requests", fields: [requesterId], references: [id])
+  receiver  User @relation("friends_proposals", fields: [receiverId], references: [id])
+
+  @@id([requesterId, receiverId])
+}
+
+model Channel {
+  id       Int         @id @default(autoincrement())
+  name     String
+  ownerId  Int
+  type     ChannelType @default(PUBLIC)
+  password String?
+
+  owner    User             @relation("channels_owner", fields: [ownerId], references: [id], onDelete: Cascade)
+  users    ChannelUser[]    @relation("channel_user_channel")
+  messages ChannelMessage[]
+}
+
+model ChannelUser {
+  channelId Int
+  userId    Int
+  until     DateTime?
+
+  user    User              @relation("channel_user_user", fields: [userId], references: [id], onDelete: Cascade)
+  channel Channel           @relation("channel_user_channel", fields: [channelId], references: [id], onDelete: Cascade)
+  state   ChannelUserStatus @default(USER)
+
+  messages ChannelMessage[]
+
+  @@id([channelId, userId])
+}
+
+model ChannelMessage {
+  id Int @id @default(autoincrement())
+
+  userId    Int
+  channelId Int
+  content   String
+  Game      Game?   @relation(fields: [gameId], references: [id])
+  gameId    String?
+
+  User    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  type ChannelMessageType @default(MESSAGE)
+
+  postedAt             DateTime     @default(now())
+  updatedAt            DateTime     @default(now()) @updatedAt
+  ChannelUser          ChannelUser? @relation(fields: [channelUserChannelId, channelUserUserId], references: [channelId, userId], onDelete: SetNull)
+  channelUserChannelId Int?
+  channelUserUserId    Int?
+}
+
+model DMChannel {
+  id               Int                @id @default(autoincrement())
+  DMChannelUser    DMChannelUser[]
+  DMChannelMessage DMChannelMessage[]
+}
+
+model DMChannelUser {
+  user   User @relation(fields: [userId], references: [id])
+  userId Int
+
+  dmChannel        DMChannel          @relation(fields: [DmChannel], references: [id], onDelete: Cascade)
+  DmChannel        Int
+  DMChannelMessage DMChannelMessage[]
+
+  @@id([userId, DmChannel])
+}
+
+model DMChannelMessage {
+  id Int @id @default(autoincrement())
+
+  content String
+  Game    Game?   @relation(fields: [gameId], references: [id])
+  gameId  String?
+
+  type ChannelMessageType @default(MESSAGE)
+
+  postedAt  DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  User          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  DMChannel     DMChannel     @relation(fields: [DmChannel], references: [id], onDelete: Cascade)
+  DMChannelUser DMChannelUser @relation(fields: [userId, DmChannel], references: [userId, DmChannel], onDelete: Cascade)
+
+  userId    Int
+  DmChannel Int
+}
+
+enum GameType {
+  PUBLIC
+  PRIVATE
+}
+
+enum GameMode {
+  NORMAL
+  SPECIAL
+  NOT_NORMAL
+}
+
+model Game {
+  id String @id @default(uuid())
+
+  status           GameStatus         @default(PENDING)
+  type             GameType           @default(PUBLIC)
+  mode             GameMode           @default(NORMAL)
+  pointsLeft       Int                @default(0)
+  pointsRight      Int                @default(0)
+  channelMessage   ChannelMessage[]
+  DMChannelMessage DMChannelMessage[]
+  duration         Int                @default(0)
+  created_at       DateTime           @default(now())
+
+  leftPlayer  User @relation("left_player", fields: [leftUserId], references: [id])
+  rightPlayer User @relation("right_player", fields: [rightUserId], references: [id])
+  rightUserId Int
+  leftUserId  Int
+}
